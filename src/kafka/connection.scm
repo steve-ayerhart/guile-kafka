@@ -1,35 +1,39 @@
 (define-module (kafka connection)
-  #:use-module (fibers)
-  #:use-module (fibers channels)
-  #:use-module (rnrs bytevectorsy)
+  #:use-module (kafka protocol messages)
+
+  #:use-module (srfi srfi-1)
+
+  #:use-module (rnrs bytevectors)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 match))
 
-(define (set-nonblocking! port)
-  (fcntl port F_SETFL (logior O_NONBLOCK (fcntl port F_GETFL)))
-  (setvbuf port 'block 1024))
+(define (broker-connect host port)
+  (define addresses
+    (delete-duplicates
+     (getaddrinfo host (if (number? port) (number->string port) port) AI_NUMERICSERV)
+     (λ (a1 a2)
+       (equal? (addrinfo:addr a1) (addrinfo:addr a2)))))
 
-(define (make-default-socket family addr port)
-  (let ((sock (socket PF_INET SOCK_STREAM 0)))
-    (setsockopt sock SOL_SOCKET SO_REUSEADDR 1)
-    (fcntl sock F_SETFD FD_CLOEXEC)
-    (bind sock family addr port)
-    (set-nonblocking! sock)
-    sock))
+  (define (open-socket)
+    (let address-loop ((addresses addresses))
+      (let* ((ai (car addresses))
+             (sock (with-fluids ((%default-port-encoding #f))
+                     (socket PF_INET SOCK_STREAM 0))))
 
-(define (client-loop client handler)
-  (setvbuf client 'block 1024)
-  (setsockopt client IPROTO_TCP TCP_NODELAY 1)
-  (with-throw-handler #t
-    (λ ()
-      (let loop ()
-        (loop)))))
+        (setsockopt sock IPPROTO_TCP TCP_NODELAY 1)
+        (fcntl sock F_SETFL (logior O_NONBLOCK (fcntl sock F_GETFL)))
+        (setvbuf sock 'block 1024)
 
-(define (socket-loop socket handler)
-  (let loop ()
-    (match (accept socket (logior SOCK_NONBLOCK SOCK_CLOEXEC))
-      ((client . sockaddr)
-       (spawn-fiber (λ ()
-                      (try-client-loop client handler))
-                    #:parallel? #t)
-       (loop)))))
+        (catch 'system-error
+          (λ ()
+            (connect sock (addrinfo:addr ai))
+
+            sock)
+
+          (λ args
+            (close sock)
+            (if (null? (cdr addresses))
+                (apply throw args)
+                (address-loop (cdr addresses))))))))
+
+  (open-socket))
