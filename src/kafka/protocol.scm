@@ -33,17 +33,17 @@
 
 (define (encode-type type value)
   (match type
-    (boolean
+    ('boolean
      (make-bytevector 1 (if value 1 0)))
-    (int16
+    ('int16
      (let ((bv (make-bytevector 2)))
        (bytevector-s16-set! bv 0 value 'big)
        bv))
-    (int32
+    ('int32
      (let ((bv (make-bytevector 4)))
        (bytevector-s32-set! bv 0 value 'big)
        bv))
-    (string
+    ('string
      (if (string-null? value)
          (let ((bv (make-bytevector 2)))
            (bytevector-s16-set! bv 0 -1 'big)
