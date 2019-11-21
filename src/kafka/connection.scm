@@ -1,5 +1,5 @@
 (define-module (kafka connection)
-  #:use-module (kafka protocol messages)
+  #:use-module (kafka protocol)
 
   #:use-module (srfi srfi-1)
 
