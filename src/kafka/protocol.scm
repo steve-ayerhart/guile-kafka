@@ -33,16 +33,12 @@
        (bytevector-copy! bv (+ 2 index) str-bv 0 str-len)
        (values (utf8->string str-bv) (+ str-len index))))))
 
-(define fake-schema
-  `((topics ((topic . string) (poop . string)))))
-
+(define (decode))
 
 (define (decode-schema schema bv)
   (let decode ((schema schema)
                (index 0)
                (decoded-values '()))
-    (format #t "~a\n" schema)
-    (format #t "values: ~a\n" decoded-values)
     (if (null? schema)
         (values decoded-values index)
         (match (car schema)
@@ -62,31 +58,24 @@
 ;                               new-index
 ;                               vals)
           ((key . 'int16)
-           (format #t "16\n")
            (decode (cdr schema)
                    (+ 2 index)
                    (acons key (bytevector-s16-ref bv index (endianness big)) decoded-values)))
           ((key . 'int32)
-           (format #t "32\n")
            (decode (cdr schema)
                    (+ 4 index)
                    (acons key (bytevector-s32-ref bv index (endianness big)) decoded-values)))
           ((key . 'string)
-           (format #t "string\n")
            (let* ((str-len (bytevector-s16-ref bv index (endianness big)))
                   (str-bv (make-bytevector str-len)))
              (bytevector-copy! bv (+ 2 index) str-bv 0 str-len)
              (decode (cdr schema)
                      (+ 2 str-len index)
                      (acons key (utf8->string str-bv) decoded-values))))
-;          ((array-key ((key . value) ..1))
-;           (error "FART"))
           ((key types)
-           (format #t "array!\n")
            (let array-loop ((count (bytevector-s32-ref bv index (endianness big)))
                             (index (+ 4 index))
                             (array-values '()))
-             (format #t "COUNT: ~a\n" count)
              (if (= 0 count)
                  (decode (cdr schema)
                          index
@@ -97,11 +86,9 @@
                                new-index
                                vals)))))
           ((key types)
-           (format #t "array!\n")
            (let array-loop ((count (bytevector-s32-ref bv index (endianness big)))
                             (index (+ 4 index))
                             (array-values '()))
-             (format #t "COUNT: ~a\n" count)
              (if (= 0 count)
                  (decode (cdr schema)
                          index
@@ -112,11 +99,9 @@
                                new-index
                                vals)))))
           ((key types)
-           (format #t "array!\n")
            (let array-loop ((count (bytevector-s32-ref bv index (endianness big)))
                             (index (+ 4 index))
                             (array-values '()))
-             (format #t "COUNT: ~a\n" count)
              (if (= 0 count)
                  (decode (cdr schema)
                          index
@@ -126,30 +111,6 @@
                    (array-loop (- count 1)
                                new-index
                                vals)))))))))
-
-(define (encode-type type value)
-  (match type
-    ('boolean
-     (make-bytevector 1 (if value 1 0)))
-    ('int16
-     (let ((bv (make-bytevector 2)))
-       (bytevector-s16-set! bv 0 value 'big)
-       bv))
-    ('int32
-     (let ((bv (make-bytevector 4)))
-       (bytevector-s32-set! bv 0 value 'big)
-       bv))
-    ('string
-     (if (string-null? value)
-         (let ((bv (make-bytevector 2)))
-           (bytevector-s16-set! bv 0 -1 'big)
-           bv)
-         (let* ((bv-string (string->utf8 value))
-                (bv-string-length (bytevector-length bv-string))
-                (bv (make-bytevector (+ 2 bv-string-length))))
-           (bytevector-s16-set! bv 0 bv-string-length 'big)
-           (bytevector-copy! bv-string 0 bv 2 bv-string-length)
-           bv)))))
 
 (define (encode-string str)
   (define utf8-string (string->utf8 str))
@@ -174,14 +135,11 @@
 
 (define (encode-array schema vals)
   (define value-array-length (length vals))
-  (format #t "ARRAY SCHEMA: ~a\n" schema)
-  (format #t "ARRAY VALS: ~a\n" vals)
   (call-with-values
       (λ ()
         (open-bytevector-output-port))
     (λ (bv-port get-bytevector)
       (let array-loop ((vals vals))
-        (format #t "array loop vals: ~a\n" vals)
         (if (null? vals)
             (let* ((values-bv (get-bytevector))
                    (values-bv-length (bytevector-length values-bv))
@@ -189,36 +147,27 @@
               (bytevector-s32-set! array-bv 0 value-array-length (endianness big))
               (bytevector-copy! values-bv 0 array-bv 4 values-bv-length)
               array-bv)
-            (match vals
+            (match schema
               (((record ...))
-               (format #t "record\n")
-               (put-bytevector bv-port (encode-schema schema vals))
+               (put-bytevector bv-port (encode-schema (car schema) (car vals)))
                (array-loop (cdr vals)))
               ((single ...)
-               (format #t "single\n")
                (put-bytevector bv-port (encode-schema schema vals))
                (array-loop (cdr vals)))))))))
 
 (define (encode-schema schema vals)
-;  (format #t "ENCODING SCHEMA: ~a\n" schema)
-;  (format #t "ENCODING VALS: ~a\n" vals)
   (call-with-values
       (λ ()
         (open-bytevector-output-port))
     (λ (bv-port get-bytevector)
       (let encode ((schema schema)
                    (vals vals))
-;        (format #t "encode loop SCHEMA: ~a\n" schema)
-;        (format #t "encode loop VALS: ~a\n" vals)
         (if (null? schema)
             (get-bytevector)
             (let ((type (car schema))
                   (val (car vals)))
-;              (format #t "match SCHEMA: ~a\n" type)
-;              (format #t "match VALS: ~a\n" val)
               (match type
                 ((array-schema ..1)
-                 (format #t "array: ~a\n" val)
                  (put-bytevector bv-port (encode-array array-schema val))
                  (encode (cdr schema) (cdr vals)))
                 ('boolean
@@ -227,13 +176,11 @@
                 ('int16
                  (put-bytevector bv-port (encode-int16 val))
                  (encode (cdr schema) (cdr vals)))
-                 ('int32
-                  (put-bytevector bv-port (encode-int32 val))
-                  (encode (cdr schema) (cdr vals)))
-                 ('string
-                  (format #t "string: ~a\n" val)
-                  (put-bytevector bv-port (encode-string val))
-                  (encode (cdr schema) (cdr vals))))))))))
+                ('int32
+                 (put-bytevector bv-port (encode-int32 val)) (encode (cdr schema) (cdr vals)))
+                ('string
+                 (put-bytevector bv-port (encode-string val))
+                 (encode (cdr schema) (cdr vals))))))))))
 
 (define (encode-request request-schema vals)
   (define encoded-data (encode-schema request-schema vals))
@@ -243,44 +190,9 @@
   (bytevector-copy! encoded-data 0 encoded-request 4 encoded-data-length)
   encoded-request)
 
-;(define (encode-array schema values)
-;  (call-with-values
-;      (λ ()
-;        (open-bytevector-output-port))
-;    (λ (bv-port get-bytevector)
-;      (let ((type (car schema)))
-;        (if (pair? type)
-;            (format #t "not yet\n")
-;            (let ((values-length (length values)))
-;              (for-each (λ (value)
-;                          (put-bytevector bv-port (encode-type type value)))
-;                        values)
-;              (let* ((bv-values (get-bytevector))
-;                     (bv-values-length (bytevector-length bv-values))
-;                     (bv-array (make-bytevector (+ 4 bv-values-length))))
-;                (bytevector-s32-set! bv-array 0 values-length (endianness big))
-;                (bytevector-copy! bv-values 0 bv-array 4 bv-values-length)
-;                bv-array)))))))
-
-;(define (encode-schema types values)
-;  (call-with-values
-;      (λ ()
-;        (open-bytevector-output-port)))
-;    (λ (bv-port get-bytevector)
-;      (for-each (λ (type value)
-;                  (put-bytevector bv-port (if (list? type) (encode-array type value) (encode-type type value)))
-;                types
-;                values))))
-;      (let* ((bv-values (get-bytevector))
-;             (bv-values-length (bytevector-length bv-values))
-;             (bv-schema (make-bytevector (+ 4 bv-values-length)))))
-;        (bytevector-s32-set! bv-schema 0 bv-values-length (endianness big))
-;        (bytevector-copy! bv-values 0 bv-schema 4 bv-values-length)
-;        bv-schema))))
-
 (define (encode-metadata-request header-data topics)
   (define metadata-request-type-schema `(,@message-header-type-schema (string)))
-  (encode-schema metadata-request-type-schema `(,@header-data ,topics)))
+  (encode-request metadata-request-type-schema `(,@header-data ,topics)))
 
 (define (decode-metadata-response response)
   (define broker-schema '((node-id . int32)
