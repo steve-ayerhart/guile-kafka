@@ -1,7 +1,38 @@
 (define-module (kafka protocol encode)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 receive))
+  #:use-module (ice-9 receive)
+  #:use-module (ice-9 binary-ports))
+
+(define (encode-boolean bool)
+  (make-bytevector 1 (if bool 1 0)))
+
+(define (encode-sint8 val)
+  (make-bytevector 1 val))
+
+(define (encode-sint16 val)
+  (define encoded-val (make-bytevector 2))
+  (bytevector-s16-set! encoded-val 0 val (endianness big))
+  encoded-val)
+
+(define (encode-sint32 val)
+  (define encoded-val (make-bytevector 4))
+  (bytevector-s32-set! encoded-val 0 val (endianness big))
+  encoded-val)
+
+(define (encode-sint64 val)
+  (define encoded-val (make-bytevector 8))
+  (bytevector-s64-set! encoded-val 0 val (endianness big))
+  encoded-val)
+
+(define (encode-uint32 val)
+  (define encoded-val (make-bytevector 4))
+  (bytevector-u32-set! encoded-val 0 val (endianness big))
+  encoded-val)
+
+;;; TODO: VARINT
+
+;;; TODO: VARLONG
 
 (define (encode-string str)
   (define utf8-string (string->utf8 str))
@@ -11,18 +42,12 @@
   (bytevector-copy! utf8-string 0 encoded-string 2 utf8-string-length)
   encoded-string)
 
-(define (encode-boolean bool)
-  (make-bytevector 1 (if bool 1 0)))
-
-(define (encode-int16 val)
-  (define encoded-val (make-bytevector 2))
-  (bytevector-s16-set! encoded-val 0 val 'big)
-  encoded-val)
-
-(define (encode-int32 val)
-  (define encoded-val (make-bytevector 4))
-  (bytevector-s32-set! encoded-val 0 val 'big)
-  encoded-val)
+(define (encode-nullable-string str)
+  (if (or (and (boolean? str) (not str)) (string-null? str))
+      (let ((encoded-string (make-bytevector 2)))
+        (bytevector-s16-set! encoded-string 0 -1 (endianness big))
+        encoded-string)
+      (encode-string str)))
 
 (define (encode-array schema vals)
   (define value-array-length (length vals))
@@ -64,11 +89,11 @@
                 ('boolean
                  (put-bytevector bv-port (encode-boolean val))
                  (encode (cdr schema) (cdr vals)))
-                ('int16
-                 (put-bytevector bv-port (encode-int16 val))
+                ('sint16
+                 (put-bytevector bv-port (encode-sint16 val))
                  (encode (cdr schema) (cdr vals)))
-                ('int32
-                 (put-bytevector bv-port (encode-int32 val)) (encode (cdr schema) (cdr vals)))
+                ('sint32
+                 (put-bytevector bv-port (encode-sint32 val)) (encode (cdr schema) (cdr vals)))
                 ('string
                  (put-bytevector bv-port (encode-string val))
                  (encode (cdr schema) (cdr vals))))))))))
@@ -82,7 +107,7 @@
   encoded-request)
 
 (define message-header-type-schema
-  '(int16 int16 int32 string))
+  '(sint16 sint16 sint32 string))
 
 (define (encode-metadata-request header-data topics)
   (define metadata-request-type-schema `(,@message-header-type-schema (string)))

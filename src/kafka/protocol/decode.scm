@@ -6,7 +6,7 @@
   #:export (decode-metadata-response))
 
 (define (decode-boolean encoded-val index)
-  (values (> 0 (bytevetor-s8-ref encoded-val index)) (+ 1 index)))
+  (values (> 0 (bytevector-s8-ref encoded-val index)) (+ 1 index)))
 
 (define (decode-sint8 encoded-val index)
   (values (bytevector-s8-ref encoded-val index) (+ 1 index)))
@@ -44,7 +44,7 @@
 
 (define (decode-bytes encoded-val index)
   (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
-  (define encoded-bytes (make-bytevector encoded-string-length))
+  (define encoded-bytes (make-bytevector encoded-bytes-length))
 
   (bytevector-copy! encoded-val (+ 4 index) encoded-bytes 0 encoded-bytes-length)
 
