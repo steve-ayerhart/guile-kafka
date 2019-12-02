@@ -1,6 +1,6 @@
 (define-module (kafka protocol)
-  #:use-module (kafka protocol encoding)
-  #:use-module (kafka protocol decoding)
+  #:use-module (kafka protocol encode)
+  #:use-module (kafka protocol decode)
 
   #:use-module (rnrs bytevectors)
   #:use-module (oop goops)
