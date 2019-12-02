@@ -5,6 +5,9 @@
 
   #:export (decode-metadata-response))
 
+(define (decode-boolean encoded-val index)
+  (values (> 0 (bytevetor-s8-ref encoded-val index)) (+ 1 index)))
+
 (define (decode-sint8 encoded-val index)
   (values (bytevector-s8-ref encoded-val index) (+ 1 index)))
 
