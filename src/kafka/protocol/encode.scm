@@ -83,6 +83,7 @@
             (let ((type (car schema))
                   (val (car vals)))
               (match type
+                ;;; TODO: add rest of types
                 ((array-schema ..1)
                  (put-bytevector bv-port (encode-array array-schema val))
                  (encode (cdr schema) (cdr vals)))

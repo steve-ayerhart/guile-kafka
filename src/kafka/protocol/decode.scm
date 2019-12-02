@@ -76,6 +76,7 @@
 
 (define (decode-type type encoded-val index)
   (match type
+    ;;; TODO: add rest of types
     ('sint16 (decode-sint16 encoded-val index))
     ('sint32 (decode-sint32 encoded-val index))
     ('string (decode-string encoded-val index))
