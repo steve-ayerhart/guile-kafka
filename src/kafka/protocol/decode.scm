@@ -54,7 +54,7 @@
   (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
 
   (if (= -1 encoded-bytes-length)
-      #f
+      (values #f (+ 4 index))
       (decode-bytes encoded-val index)))
 
 (define (decode-array schema encoded-val index)
