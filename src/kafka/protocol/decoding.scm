@@ -1,11 +1,9 @@
 (define-module (kafka protocol decoding)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
-  #:use-module (ice-9receive)
+  #:use-module (ice-9 receive)
 
   #:export (decode-metadata-response))
-
-(define message-header-response-schema '((correlation-id . int32)))
 
 (define (decode-int16 encoded-val index)
   (values (bytevector-s16-ref encoded-val index (endianness big)) (+ 2 index)))
@@ -55,6 +53,8 @@
         (receive (decoded-value new-index)
             (decode-type (cdar schema) bv index)
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
+
+(define message-header-response-schema '((correlation-id . int32)))
 
 (define (decode-metadata-response response)
   (define broker-schema '((node-id . int32)

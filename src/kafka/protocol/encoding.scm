@@ -1,10 +1,7 @@
 (define-module (kafka protocol encoding)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
-  #:use-module (ice-9receive))
-
-(define message-header-type-schema
-  '(int16 int16 int32 string))
+  #:use-module (ice-9 receive))
 
 (define (encode-string str)
   (define utf8-string (string->utf8 str))
@@ -83,6 +80,9 @@
   (bytevector-s32-set! encoded-request 0 encoded-data-length (endianness big))
   (bytevector-copy! encoded-data 0 encoded-request 4 encoded-data-length)
   encoded-request)
+
+(define message-header-type-schema
+  '(int16 int16 int32 string))
 
 (define (encode-metadata-request header-data topics)
   (define metadata-request-type-schema `(,@message-header-type-schema (string)))
