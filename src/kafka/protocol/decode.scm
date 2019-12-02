@@ -1,15 +1,28 @@
-(define-module (kafka protocol decoding)
+(define-module (kafka protocol decode)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
   #:use-module (ice-9 receive)
 
   #:export (decode-metadata-response))
 
-(define (decode-int16 encoded-val index)
+(define (decode-sint8 encoded-val index)
+  (values (bytevector-s8-ref encoded-val index) (+ 1 index)))
+
+(define (decode-sint16 encoded-val index)
   (values (bytevector-s16-ref encoded-val index (endianness big)) (+ 2 index)))
 
-(define (decode-int32 encoded-val index)
+(define (decode-sint32 encoded-val index)
   (values (bytevector-s32-ref encoded-val index (endianness big)) (+ 4 index)))
+
+(define (decode-sint64 encoded-val index)
+  (values (bytevector-s64-ref encoded-val index (endianness big)) (+ 8 index)))
+
+(define (decode-uint32 encoded-val index)
+  (values (bytevector-u32-ref encoded-val index (endianness big)) (+ 4 index)))
+
+;;; TODO: VARINT
+
+;;; TODO: VARLONG
 
 (define (decode-string encoded-val index)
   (define encoded-string-length (bytevector-s16-ref encoded-val index (endianness big)))
@@ -18,6 +31,28 @@
   (bytevector-copy! encoded-val (+ 2 index) encoded-string 0 encoded-string-length)
 
   (values (utf8->string encoded-string) (+ 2 encoded-string-length index)))
+
+(define (decode-nullable-string encoded-val index)
+  (define encoded-string-length (bytevector-s16-ref encoded-val index (endianness big)))
+
+  (if (= -1 encoded-string-length)
+      #f
+      (decode-string encoded-val index)))
+
+(define (decode-bytes encoded-val index)
+  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
+  (define encoded-bytes (make-bytevector encoded-string-length))
+
+  (bytevector-copy! encoded-val (+ 4 index) encoded-bytes 0 encoded-bytes-length)
+
+  (values encoded-bytes (+ 4 encoded-bytes-length)))
+
+(define (decode-nullable-bytes encoded-val index)
+  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
+
+  (if (= -1 encoded-bytes-length)
+      #f
+      (decode-bytes encoded-val index)))
 
 (define (decode-array schema encoded-val index)
   (define encoded-array-length (bytevector-s32-ref encoded-val index (endianness big)))
@@ -38,8 +73,8 @@
 
 (define (decode-type type encoded-val index)
   (match type
-    ('int16 (decode-int16 encoded-val index))
-    ('int32 (decode-int32 encoded-val index))
+    ('sint16 (decode-sint16 encoded-val index))
+    ('sint32 (decode-sint32 encoded-val index))
     ('string (decode-string encoded-val index))
     ((array-schema ...)
      (decode-array array-schema encoded-val index))))
@@ -54,18 +89,18 @@
             (decode-type (cdar schema) bv index)
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
 
-(define message-header-response-schema '((correlation-id . int32)))
+(define message-header-response-schema '((correlation-id . sint32)))
 
 (define (decode-metadata-response response)
-  (define broker-schema '((node-id . int32)
+  (define broker-schema '((node-id . sint32)
                           (host . string)
-                          (port . int32)))
-  (define partition-schema `((error-code . in16)
-                             (partition-index . int32)
-                             (leader-id . int32)
-                             (replica-nodes (int32))
-                             (isr-nodes (int32))))
-  (define topic-schema `((error-code . int16)
+                          (port . sint32)))
+  (define partition-schema `((error-code . sint16)
+                             (partition-index . sint32)
+                             (leader-id . sint32)
+                             (replica-nodes (sint32))
+                             (isr-nodes (sint32))))
+  (define topic-schema `((error-code . sint16)
                          (name . string)
                          (partitions ,partition-schema)))
 

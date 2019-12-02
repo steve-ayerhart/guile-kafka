@@ -1,4 +1,4 @@
-(define-module (kafka protocol encoding)
+(define-module (kafka protocol decode)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
   #:use-module (ice-9 receive))
