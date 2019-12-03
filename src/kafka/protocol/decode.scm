@@ -96,17 +96,6 @@
 (define message-header-response-schema '((correlation-id . sint32)))
 
 (define (decode-metadata-response response)
-  (define broker-schema '((node-id . sint32)
-                          (host . string)
-                          (port . sint32)))
-  (define partition-schema `((error-code . sint16)
-                             (partition-index . sint32)
-                             (leader-id . sint32)
-                             (replica-nodes (sint32))
-                             (isr-nodes (sint32))))
-  (define topic-schema `((error-code . sint16)
-                         (name . string)
-                         (partitions ,partition-schema)))
 
   (define metadata-response-schema `(,@message-header-response-schema
                                      (brokers ,broker-schema)
