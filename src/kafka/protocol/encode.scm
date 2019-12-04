@@ -2,7 +2,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 match)
   #:use-module (ice-9 receive)
-  #:use-module (ice-9 binary-ports))
+  #:use-module (ice-9 binary-ports)
+
+  #:export (encode-request))
 
 (define (encode-boolean bool)
   (make-bytevector 1 (if bool 1 0)))
@@ -106,10 +108,3 @@
   (bytevector-s32-set! encoded-request 0 encoded-data-length (endianness big))
   (bytevector-copy! encoded-data 0 encoded-request 4 encoded-data-length)
   encoded-request)
-
-(define message-header-type-schema
-  '(sint16 sint16 sint32 string))
-
-(define (encode-metadata-request header-data topics)
-  (define metadata-request-type-schema `(,@message-header-type-schema (string)))
-  (encode-request metadata-request-type-schema `(,@header-data ,topics)))

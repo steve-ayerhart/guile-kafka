@@ -3,7 +3,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 receive)
 
-  #:export (decode-metadata-response))
+  #:export (decode-request))
 
 (define (decode-boolean encoded-val index)
   (values (> 0 (bytevector-s8-ref encoded-val index)) (+ 1 index)))
@@ -64,12 +64,13 @@
                    (array-values '()))
     (if (= 0 count)
         (values (cons (reverse array-values) '()) index)
-        (match schema
-          (((record ...))
+        (match (car schema)
+          ((_ ((_ . _) ...))
            (receive (decoded-value new-index)
-               (decode-schema (car schema) encoded-val index)
+               (decode-schema (cons (car schema) '()) encoded-val index)
              (array-loop new-index (- count 1) (cons decoded-value array-values))))
-          ((single ...)
+          (else
+           (format #t "NOOO: ~a\n" schema)
            (receive (decoded-value new-index)
                (decode-type (car single) encoded-val index)
              (array-loop new-index (- count 1) (cons decoded-value array-values))))))))
@@ -93,12 +94,5 @@
             (decode-type (cdar schema) bv index)
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
 
-(define message-header-response-schema '((correlation-id . sint32)))
-
-(define (decode-metadata-response response)
-
-  (define metadata-response-schema `(,@message-header-response-schema
-                                     (brokers ,broker-schema)
-                                     (topics ,topic-schema)))
-  metadata-response-schema)
-;  (decode-schema metadata-response-schema response))
+(define (decode-request request-schema bv)
+  (decode-schema request-schema bv 0))
