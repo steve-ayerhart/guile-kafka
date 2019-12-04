@@ -4,7 +4,7 @@
   #:use-module (ice-9 receive)
   #:use-module (ice-9 binary-ports)
 
-  #:export (encode-request))
+  #:export (encode-request encode-schema))
 
 (define (encode-boolean bool)
   (make-bytevector 1 (if bool 1 0)))
@@ -65,13 +65,13 @@
               (bytevector-s32-set! array-bv 0 value-array-length (endianness big))
               (bytevector-copy! values-bv 0 array-bv 4 values-bv-length)
               array-bv)
-            (match schema
-              (((record ..1))
-               (put-bytevector bv-port (encode-schema record (car vals)))
-               (array-loop (cdr vals)))
-              ((single)
-               (put-bytevector bv-port (encode-schema schema vals))
-               (array-loop (cdr vals)))))))))
+            (if (= 1 (length schema))
+                (begin
+                  (put-bytevector bv-port (encode-schema schema vals))
+                  (array-loop (cdr vals)))
+                (begin
+                  (put-bytevector bv-port (encode-schema schema (car vals)))
+                  (array-loop (cdr vals)))))))))
 
 (define (encode-schema schema vals)
   (call-with-values
@@ -86,7 +86,7 @@
                   (val (car vals)))
               (match type
                 ;;; TODO: add rest of types
-                ((array-schema ..1)
+                ((array-schema ...)
                  (put-bytevector bv-port (encode-array array-schema val))
                  (encode (cdr schema) (cdr vals)))
                 ('boolean

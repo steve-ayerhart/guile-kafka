@@ -59,30 +59,51 @@
 
 (define (decode-array schema encoded-val index)
   (define encoded-array-length (bytevector-s32-ref encoded-val index (endianness big)))
+  (format #t "encode array: ~a: ~a\n" schema index)
   (let array-loop ((index (+ 4 index))
                    (count encoded-array-length)
                    (array-values '()))
     (if (= 0 count)
         (values (cons (reverse array-values) '()) index)
-        (match (car schema)
-          ((_ ((_ . _) ...))
+        (match schema
+          (((_ . _) ...)
+           (format #t "record ~a\n" count)
            (receive (decoded-value new-index)
-               (decode-schema (cons (car schema) '()) encoded-val index)
+               (decode-schema schema encoded-val index)
              (array-loop new-index (- count 1) (cons decoded-value array-values))))
           (else
-           (format #t "NOOO: ~a\n" schema)
+           (format #t "single ~a\n" count)
            (receive (decoded-value new-index)
-               (decode-type (car single) encoded-val index)
+               (decode-type (car schema) encoded-val index)
              (array-loop new-index (- count 1) (cons decoded-value array-values))))))))
+;        (if (= 1 (length schema))
+;            (receive (decoded-value new-index)
+;                (decode-type (car schema) encoded-val index)
+;              (format #t "LOOP: ~a: ~a\n" count index)
+;              (array-loop new-index (- count 1) (cons decoded-value array-values)))
+;            (receive (decoded-value new-index)
+;                (decode-schema (cons (car schema) '()) encoded-val index)
+;              (array-loop new-index (- count 1) (cons decoded-value array-values)))))))
+;        (match (car schema)
+;          ((_ ((_ . _) ...))
+;           (receive (decoded-value new-index)
+;               (decode-schema (cons (car schema) '()) encoded-val index)
+;             (array-loop new-index (- count 1) (cons decoded-value array-values))))
+;          (else
+;           (format #t "NOOO: ~a\n" schema)
+;           (receive (decoded-value new-index)
+;               (decode-type (car single) encoded-val index)
+;             (array-loop new-index (- count 1) (cons decoded-value array-values))))))))
 
 (define (decode-type type encoded-val index)
+  (format #t "type: ~a\n" type)
   (match type
     ;;; TODO: add rest of types
     ('sint16 (decode-sint16 encoded-val index))
     ('sint32 (decode-sint32 encoded-val index))
     ('string (decode-string encoded-val index))
-    ((array-schema ...)
-     (decode-array array-schema encoded-val index))))
+    (else ; we have an array
+     (decode-array type encoded-val index))))
 
 (define (decode-schema schema bv index)
   (let decode ((schema schema)
@@ -91,8 +112,12 @@
     (if (null? schema)
         (values (reverse decoded-values) index)
         (receive (decoded-value new-index)
-            (decode-type (cdar schema) bv index)
+            (match schema
+              (((_ ((_ . _) ...)))
+               (decode-type (cadar schema) bv index))
+              (else
+               (decode-type (cdar schema) bv index)))
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
 
-(define (decode-request request-schema bv)
+(define (decode-message request-schema bv)
   (decode-schema request-schema bv 0))
