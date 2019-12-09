@@ -20,7 +20,7 @@
         (if (or schema (= 0 version))
             (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
                 (append message-header-type-schema schema)
-                (acons 'correlation-id 'string schema))
+                (acons 'correlation-id 'sint32 (car schema)))
             (fetch (- version 1)))))))
 
 (define-schema api-version-request-schema '((0) (1) (2)))
