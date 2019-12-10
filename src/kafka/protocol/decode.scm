@@ -23,6 +23,18 @@
 (define (decode-uint32 encoded-val index)
   (values (bytevector-u32-ref encoded-val index (endianness big)) (+ 4 index)))
 
+(define (decode-bytes encoded-val index)
+  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
+  (define encoded-bytes (make-bytevector encoded-bytes-length))
+  (bytevector-copy! encoded-val (+ 4 index) encoded-bytes 0 encoded-bytes-length)
+  encoded-bytes)
+
+(define (decode-nullable-bytes encoded-val index)
+  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
+  (if (= -1 encoded-bytes-length)
+      #f
+      (decode-bytes encoded-val index)))
+
 ;;; TODO: VARINT
 
 ;;; TODO: VARLONG

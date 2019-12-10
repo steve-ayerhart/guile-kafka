@@ -32,6 +32,20 @@
   (bytevector-u32-set! encoded-val 0 val (endianness big))
   encoded-val)
 
+(define (encode-bytes val)
+  (define val-length (bytevector-length val))
+  (define encoded-val (make-bytevector val-length))
+  (bytevector-s32-set! encoded-val 0 val-length (endianness big))
+  (bytevector-copy! val 0 encoded-val 4 val-length)
+  encoded-bytes)
+
+(define (encode-nullable-bytes val)
+  (if (or (and (boolean? val) (not (bytevector? val))) (= 0 (bytevector-length val)))
+      (let ((encoded-bytes (make-bytevector 4)))
+        (bytevector-s32-set! encoded-bytes 0 -1 (endianness big))
+        encoded-bytes)
+      (encode-bytes val)))
+
 ;;; TODO: VARINT
 
 ;;; TODO: VARLONG
