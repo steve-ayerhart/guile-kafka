@@ -4,12 +4,16 @@
             api-version-request-schema
             api-version-response-schema
             metadata-request-schema
-            metadata-response-schema))
+            metadata-response-schema
+            sasl-authenticate-request-schema
+            sasl-authenticate-response-schema))
 
 (define current-api-version (make-parameter 0))
 
 (define message-header-type-schema
   '(sint16 sint16 sint32 string))
+
+;;; TODO is there a better way to define api schemas?
 
 (define-syntax-rule (define-schema name schemas)
   "defines a function @name that returns a schema based of the
@@ -102,3 +106,16 @@
                               (leader-id . sint32)
                               (replica-nodes (sint32))
                               (isr-nodes (sint32))))))))))
+
+(define-schema sasl-authenticate-request-schema
+  '((0 (bytes))
+    (1 (bytes))))
+
+(define-schema sasl-authenticate-response-schema
+  '((0 ((error-code . sint16)
+        (error-message . nullable-string)
+        (auth-bytes . bytes)))
+    (1 ((error-code . sint16)
+        (error-message . nullable-string)
+        (auth-bytes . bytes)
+        (session-lifetime-ms . sint64)))))

@@ -92,6 +92,8 @@
     ('sint16 (decode-sint16 encoded-val index))
     ('sint32 (decode-sint32 encoded-val index))
     ('string (decode-string encoded-val index))
+    ('bytes (decode-bytes encoded-val index))
+    ('nullable-bytes (decode-nullable-bytes encoded-val index))
     (else ; we have an array
      (decode-array (car type) encoded-val index))))
 

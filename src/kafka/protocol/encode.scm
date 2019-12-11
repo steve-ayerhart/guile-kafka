@@ -34,10 +34,10 @@
 
 (define (encode-bytes val)
   (define val-length (bytevector-length val))
-  (define encoded-val (make-bytevector val-length))
+  (define encoded-val (make-bytevector (+ 4 val-length)))
   (bytevector-s32-set! encoded-val 0 val-length (endianness big))
   (bytevector-copy! val 0 encoded-val 4 val-length)
-  encoded-bytes)
+  encoded-val)
 
 (define (encode-nullable-bytes val)
   (if (or (and (boolean? val) (not val)) (= 0 (bytevector-length val)))
@@ -100,6 +100,7 @@
                   (val (car vals)))
               (match type
                 ;;; TODO: add rest of types
+                ;;; TODO: can I simplify this more?
                 ((array-schema ...)
                  (put-bytevector bv-port (encode-array array-schema val))
                  (encode (cdr schema) (cdr vals)))
@@ -110,10 +111,17 @@
                  (put-bytevector bv-port (encode-sint16 val))
                  (encode (cdr schema) (cdr vals)))
                 ('sint32
-                 (put-bytevector bv-port (encode-sint32 val)) (encode (cdr schema) (cdr vals)))
+                 (put-bytevector bv-port (encode-sint32 val))
+                 (encode (cdr schema) (cdr vals)))
                 ('string
                  (put-bytevector bv-port (encode-string val))
-                 (encode (cdr schema) (cdr vals))))))))))
+                 (encode (cdr schema) (cdr vals)))
+                ('nullable-string
+                 (put-bytevector bv-port (encode-nullable-string val)))
+                ('bytes
+                 (put-bytevector bv-port (encode-bytes val)))
+                ('nullable-bytes
+                 (put-bytevector bv-port (encode-nullable-bytes val))))))))))
 
 (define (encode-request request-schema vals)
   (define encoded-data (encode-schema request-schema vals))
