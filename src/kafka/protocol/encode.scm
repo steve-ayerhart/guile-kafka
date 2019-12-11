@@ -40,7 +40,7 @@
   encoded-bytes)
 
 (define (encode-nullable-bytes val)
-  (if (or (and (boolean? val) (not (bytevector? val))) (= 0 (bytevector-length val)))
+  (if (or (and (boolean? val) (not val)) (= 0 (bytevector-length val)))
       (let ((encoded-bytes (make-bytevector 4)))
         (bytevector-s32-set! encoded-bytes 0 -1 (endianness big))
         encoded-bytes)
