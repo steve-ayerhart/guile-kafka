@@ -1,11 +1,14 @@
 (define-module (kafka connection)
+  #:use-module (kafka protocol sasl)
   #:use-module (kafka protocol api)
 
   #:use-module (srfi srfi-1)
 
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 binary-ports)
-  #:use-module (ice-9 match))
+  #:use-module (ice-9 match)
+
+  #:export (broker-connect))
 
 (define (broker-connect host port)
   (define addresses

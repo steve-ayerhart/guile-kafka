@@ -5,6 +5,8 @@
             api-version-response-schema
             metadata-request-schema
             metadata-response-schema
+            sasl-handshake-request-schema
+            sasl-handshake-response-schema
             sasl-authenticate-request-schema
             sasl-authenticate-response-schema))
 
@@ -23,11 +25,11 @@
       (let ((schema (assoc-ref schemas version)))
         (if (or schema (= 0 version))
             (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
-                (append message-header-type-schema schema)
+                (append message-header-type-schema (car schema))
                 (acons 'correlation-id 'sint32 (car schema)))
             (fetch (- version 1)))))))
 
-(define-schema api-version-request-schema '((0) (1) (2)))
+(define-schema api-version-request-schema '((0 ()) (1 ()) (2 ())))
 (define-schema api-version-response-schema
   '((0 ((error-code . sint16)
         (api-versions ((api-key . sint16)
@@ -42,6 +44,15 @@
                        (min-version . sint16)
                        (max-version . sint16)))
         (throttle-time-ms . sint32)))))
+
+(define-schema sasl-handshake-request-schema
+  '((0 (string))
+    (1 (string))))
+(define-schema sasl-handshake-response-schema
+  '((0 ((error-code . sint16)
+        (mechanisms (string))))
+    (1 ((error-code . sint16)
+        (mechanisms (string))))))
 
 (define-schema metadata-request-schema
   '((0 ((string)))

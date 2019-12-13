@@ -23,18 +23,6 @@
 (define (decode-uint32 encoded-val index)
   (values (bytevector-u32-ref encoded-val index (endianness big)) (+ 4 index)))
 
-(define (decode-bytes encoded-val index)
-  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
-  (define encoded-bytes (make-bytevector encoded-bytes-length))
-  (bytevector-copy! encoded-val (+ 4 index) encoded-bytes 0 encoded-bytes-length)
-  encoded-bytes)
-
-(define (decode-nullable-bytes encoded-val index)
-  (define encoded-bytes-length (bytevector-s32-ref encoded-val index (endianness big)))
-  (if (= -1 encoded-bytes-length)
-      #f
-      (decode-bytes encoded-val index)))
-
 ;;; TODO: VARINT
 
 ;;; TODO: VARLONG
@@ -51,7 +39,7 @@
   (define encoded-string-length (bytevector-s16-ref encoded-val index (endianness big)))
 
   (if (= -1 encoded-string-length)
-      #f
+      (values #f (+ 2 index))
       (decode-string encoded-val index)))
 
 (define (decode-bytes encoded-val index)
@@ -92,6 +80,7 @@
     ('sint16 (decode-sint16 encoded-val index))
     ('sint32 (decode-sint32 encoded-val index))
     ('string (decode-string encoded-val index))
+    ('nullable-string (decode-nullable-string encoded-val index))
     ('bytes (decode-bytes encoded-val index))
     ('nullable-bytes (decode-nullable-bytes encoded-val index))
     (else ; we have an array

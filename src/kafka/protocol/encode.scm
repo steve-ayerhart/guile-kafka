@@ -119,9 +119,11 @@
                 ('nullable-string
                  (put-bytevector bv-port (encode-nullable-string val)))
                 ('bytes
-                 (put-bytevector bv-port (encode-bytes val)))
+                 (put-bytevector bv-port (encode-bytes val))
+                 (encode (cdr schema) (cdr vals)))
                 ('nullable-bytes
-                 (put-bytevector bv-port (encode-nullable-bytes val))))))))))
+                 (put-bytevector bv-port (encode-nullable-bytes val))
+                 (encode (cdr schema) (cdr vals))))))))))
 
 (define (encode-request request-schema vals)
   (define encoded-data (encode-schema request-schema vals))
