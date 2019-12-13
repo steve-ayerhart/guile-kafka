@@ -1,8 +1,8 @@
 (define-module (kafka protocol messages)
   #:use-module (ice-9 regex)
   #:export (current-api-version
-            api-version-request-schema
-            api-version-response-schema
+            api-versions-request-schema
+            api-versions-response-schema
             metadata-request-schema
             metadata-response-schema
             sasl-handshake-request-schema
@@ -17,20 +17,23 @@
 
 ;;; TODO is there a better way to define api schemas?
 
-(define-syntax-rule (define-schema name schemas)
+(define-syntax-rule (define-schema name schema-definition)
   "defines a function @name that returns a schema based of the
 @current-api-version parameter"
   (define (name)
-    (let fetch ((version (current-api-version)))
-      (let ((schema (assoc-ref schemas version)))
-        (if (or schema (= 0 version))
-            (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
-                (append message-header-type-schema (car schema))
-                (acons 'correlation-id 'sint32 (car schema)))
-            (fetch (- version 1)))))))
+    (let ((api-key (car schema-definition))
+          (schemas (cdr schema-definition)))
+      (values api-key
+              (let fetch ((version (current-api-version)))
+                (let ((schema (assoc-ref schemas version)))
+                  (if (or schema (= 0 version))
+                      (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
+                          (append message-header-type-schema (car schema))
+                          (acons 'correlation-id 'sint32 (car schema)))
+                      (fetch (- version 1)))))))))
 
-(define-schema api-version-request-schema '((0 ()) (1 ()) (2 ())))
-(define-schema api-version-response-schema
+(define-schema api-versions-request-schema '(18 (0 ()) (1 ()) (2 ())))
+(define-schema api-versions-response-schema
   '((0 ((error-code . sint16)
         (api-versions ((api-key . sint16)
                        (min-version . sint16)
