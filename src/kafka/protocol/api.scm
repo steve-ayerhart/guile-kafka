@@ -25,22 +25,24 @@
       (decode-request (api-version-response-schema) encoded-response))))
 
 (define (request-sasl-handshake sock mechanism)
+  ;; TODO version 1 wraps sasl-authenticate with kafka headers, 0 does not
+  ;;      handle ths gracefully
   (parameterize ((current-api-version 1))
-  (define encoded-request
-    (encode-request (sasl-handshake-request-schema)
-                    `(17 ,(current-api-version) 1337 "guile" ,mechanism)))
-  (put-bytevector sock encoded-request)
-  (force-output sock)
-  (let* ((size (bytevector-s32-ref (get-bytevector-n sock 4) 0 'big))
-         (encoded-response (get-bytevector-n sock size)))
-    (decode-request (sasl-handshake-response-schema) encoded-response))))
-
-(define (request-sasl-authenticate sock mechanism)
     (define encoded-request
-      (encode-request (sasl-authenticate-request-schema)
-                      `(36 ,(current-api-version) 1337 "guile" ,mechanism)))
+      (encode-request (sasl-handshake-request-schema)
+                      `(17 ,(current-api-version) 1337 "guile" ,mechanism)))
     (put-bytevector sock encoded-request)
     (force-output sock)
     (let* ((size (bytevector-s32-ref (get-bytevector-n sock 4) 0 'big))
            (encoded-response (get-bytevector-n sock size)))
-      (decode-request (sasl-authenticate-response-schema) encoded-response)))
+      (decode-request (sasl-handshake-response-schema) encoded-response))))
+
+(define (request-sasl-authenticate sock mechanism)
+  (define encoded-request
+    (encode-request (sasl-authenticate-request-schema)
+                    `(36 ,(current-api-version) 1337 "guile" ,mechanism)))
+  (put-bytevector sock encoded-request)
+  (force-output sock)
+  (let* ((size (bytevector-s32-ref (get-bytevector-n sock 4) 0 'big))
+         (encoded-response (get-bytevector-n sock size)))
+    (decode-request (sasl-authenticate-response-schema) encoded-response)))
