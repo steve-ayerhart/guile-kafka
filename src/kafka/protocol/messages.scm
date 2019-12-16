@@ -1,6 +1,6 @@
 (define-module (kafka protocol messages)
   #:use-module (ice-9 regex)
-  #:export (current-api-version
+  #:export (request-message-header-schema
             api-versions-request-schema
             api-versions-response-schema
             metadata-request-schema
@@ -10,29 +10,11 @@
             sasl-authenticate-request-schema
             sasl-authenticate-response-schema))
 
-(define current-api-version (make-parameter 0))
-
-(define message-header-type-schema
+(define request-message-header-schema
   '(sint16 sint16 sint32 string))
 
-;;; TODO is there a better way to define api schemas?
-
-(define-syntax-rule (define-schema name schema-definition)
-  "defines a function @name that returns a schema based of the
-@current-api-version parameter"
-  (define (name)
-    (let ((api-key (car schema-definition))
-          (schemas (cdr schema-definition)
-              (let fetch ((version (current-api-version)))
-                (let ((schema (assoc-ref schemas version)))
-                  (if (or schema (= 0 version))
-                      (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
-                          (append message-header-type-schema (car schema))
-                          (acons 'correlation-id 'sint32 (car schema)))
-                      (fetch (- version 1))))))))))
-,re
-(define-schema api-versions-request-schema '((0 ()) (1 ()) (2 ())))
-(define-schema api-versions-response-schema
+(define api-versions-request-schema '((0 ()) (1 ()) (2 ())))
+(define api-versions-response-schema
   '((0 ((error-code . sint16)
         (api-versions ((api-key . sint16)
                        (min-version . sint16)
@@ -47,16 +29,16 @@
                        (max-version . sint16)))
         (throttle-time-ms . sint32)))))
 
-(define-schema sasl-handshake-request-schema
+(define sasl-handshake-request-schema
   '((0 (string))
     (1 (string))))
-(define-schema sasl-handshake-response-schema
+(define sasl-handshake-response-schema
   '((0 ((error-code . sint16)
         (mechanisms (string))))
     (1 ((error-code . sint16)
         (mechanisms (string))))))
 
-(define-schema metadata-request-schema
+(define metadata-request-schema
   '((0 ((string)))
     (1 ((string)))
     (2 ((string)))
@@ -67,7 +49,7 @@
     (7 ((string) boolean))
     (8 ((string) boolean boolean boolean))))
 
-(define-schema metadata-response-schema
+(define metadata-response-schema
   '((0 ((brokers ((node-id . sint32)
                   (host . string)
                   (port . sint32)))
@@ -120,11 +102,11 @@
                               (replica-nodes (sint32))
                               (isr-nodes (sint32))))))))))
 
-(define-schema sasl-authenticate-request-schema
+(define sasl-authenticate-request-schema
   '((0 (bytes))
     (1 (bytes))))
 
-(define-schema sasl-authenticate-response-schema
+(define sasl-authenticate-response-schema
   '((0 ((error-code . sint16)
         (error-message . nullable-string)
         (auth-bytes . bytes)))

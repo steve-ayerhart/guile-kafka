@@ -42,6 +42,14 @@
                  (let* ((size (bytevector-s32-ref (get-bytevector-n sock 4) 0 (endianness big)))
                         (encoded-response (get-bytevector-n sock size)))
                    (decode-response (assoc-ref resp-schemas current-api-version) encoded-response))))
+              ...))))
+      ((_ name api-key request-schemas response-schemas ((api-version ...) (formal ...) body) ...)
+       #'(define name
+           (let ((key api-key) (req-schemas request-schemas) (resp-schemas response-schemas))
+             (case-lambda*
+              ((sock formal ... #:optional (correlation-id 1337) (client-id "guile-kafka"))
+               (let ((current-api-version (highest-supported-api-version api-key api-version ...)))
+                 body))
               ...)))))))
 
 
@@ -119,6 +127,7 @@
    (topics allow-auto-topic-creation))
   ((8)
    (topics allow-auto-topic-creation include-cluster-authorized-operations include-topic-authorized-operations)))
+
 ;; TODO handle errors
 (define* (request-api-versions sock #:optional (correlation-id 1337) (client-id "guile-kafka"))
   (define api-versions-response-schema
