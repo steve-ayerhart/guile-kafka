@@ -71,7 +71,7 @@
              (array-loop new-index (- count 1) (cons decoded-value array-values))))
           (else
            (receive (decoded-value new-index)
-               (decode-type (car schema) encoded-val index)
+               (decode-type (cdr schema) encoded-val index)
              (array-loop new-index (- count 1) (cons decoded-value array-values))))))))
 
 (define (decode-type type encoded-val index)
@@ -84,7 +84,7 @@
     ('bytes (decode-bytes encoded-val index))
     ('nullable-bytes (decode-nullable-bytes encoded-val index))
     (else ; we have an array
-     (decode-array (car type) encoded-val index))))
+     (decode-array type encoded-val index))))
 
 (define (decode-schema schema bv index)
   (let decode ((schema schema)
@@ -93,11 +93,7 @@
     (if (null? schema)
         (values (reverse decoded-values) index)
         (receive (decoded-value new-index)
-            (match schema
-              (((_ ((_ . _) ...)))
-               (decode-type (cadar schema) bv index))
-              (else
-               (decode-type (cdar schema) bv index)))
+               (decode-type (cdar schema) bv index)
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
 
 (define (decode-response response-schema bv)
