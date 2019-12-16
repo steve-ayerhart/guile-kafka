@@ -3,7 +3,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 receive)
 
-  #:export (decode-request))
+  #:export (decode-response))
 
 (define (decode-boolean encoded-val index)
   (values (> 0 (bytevector-s8-ref encoded-val index)) (+ 1 index)))
@@ -100,7 +100,7 @@
                (decode-type (cdar schema) bv index)))
           (decode (cdr schema) new-index (acons (caar schema) decoded-value decoded-values))))))
 
-(define (decode-request request-schema bv)
-  (receive (decoded-request new-index)
-      (decode-schema request-schema bv 0)
-    decoded-request))
+(define (decode-response response-schema bv)
+  (receive (decoded-response new-index)
+      (decode-schema response-schema bv 0)
+    decoded-response))

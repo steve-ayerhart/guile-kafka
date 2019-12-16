@@ -22,17 +22,16 @@
 @current-api-version parameter"
   (define (name)
     (let ((api-key (car schema-definition))
-          (schemas (cdr schema-definition)))
-      (values api-key
+          (schemas (cdr schema-definition)
               (let fetch ((version (current-api-version)))
                 (let ((schema (assoc-ref schemas version)))
                   (if (or schema (= 0 version))
                       (if (regexp-match? (string-match "request" (symbol->string (procedure-name name))))
                           (append message-header-type-schema (car schema))
                           (acons 'correlation-id 'sint32 (car schema)))
-                      (fetch (- version 1)))))))))
-
-(define-schema api-versions-request-schema '(18 (0 ()) (1 ()) (2 ())))
+                      (fetch (- version 1))))))))))
+,re
+(define-schema api-versions-request-schema '((0 ()) (1 ()) (2 ())))
 (define-schema api-versions-response-schema
   '((0 ((error-code . sint16)
         (api-versions ((api-key . sint16)
